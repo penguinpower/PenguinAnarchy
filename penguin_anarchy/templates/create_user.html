@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+<title>Login</title>
+</head>
+<body>
+  <h1>Login</h1>
+  <p>Please select a username and password to create an account with us.</p>
+  <form action="/users/" method="POST">
+  <label for="name-input">Full Name</label>
+  <input type="text" name="name"/><br />
+  <label for="email-input">Email Address</label>
+  <input type="text" name="email"/><br />
+  <label for="password-input">Password</label>
+  <input type="password" name="password"/><br />
+  <label for="password-confirm-input">Confirm Password</label>
+  <input type="password" name="password_confirm"/><br />
+  <input type="submit" value="Create Account"/> 
+  </form>
+</body>
+</html>
