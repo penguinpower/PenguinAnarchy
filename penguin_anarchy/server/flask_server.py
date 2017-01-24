@@ -10,6 +10,7 @@ from flask import Flask
 from flask import g
 from flask import redirect, request, url_for, abort
 from flask import render_template
+app = Flask(__name__)
 
 DATABASE = 'penguin.db'
 SMTP_ACCOUNT = 'penguin@collison.net'
@@ -17,9 +18,6 @@ SMTP_ACCOUNT_PASSWORD = os.environ['PENGUIN_PASSWORD']
 SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 465
 
-TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../templates')
-
-app = Flask(__name__, template_folder=TEMPLATE_DIR)
 
 def get_db():
     db = getattr(g, '_database', None)
