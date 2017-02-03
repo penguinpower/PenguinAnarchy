@@ -1,0 +1,4 @@
+  Hello {{ fullname }}! Please follow this link in order to validate your newly account:
+  {{ url }}
+
+

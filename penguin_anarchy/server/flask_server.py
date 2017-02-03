@@ -1,5 +1,7 @@
 import bcrypt
 from datetime import datetime, timedelta
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
 import logging
 import os
 import smtplib
@@ -184,21 +186,35 @@ def create_new_user(user_data):
 
 def send_validation_email(new_user):
 
+    app.logger.debug('sending email')
     email = new_user['email']
     name = new_user['name']
+    token = new_user['validation_token']
+    url = 'https://penguin-anarchy.org/validate/%s/%s' %(email, token)
+    msg = MIMEMultipart()
+ 
+    msg['From'] = SMTP_ACCOUNT
+    msg['To'] = email
+    msg['Subject'] = "Penguin Anarchy Token"
 
     server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
     server.set_debuglevel(True)
     server.login(SMTP_ACCOUNT, SMTP_ACCOUNT_PASSWORD)
- 
-    msg = ("Thanks for signing up with Penguin Anarchy!  In order "
-           "to use your new account, please follow the link in this "
-           "email.")
-    server.sendmail(SMTP_ACCOUNT, email, msg)
+     
+    text = render_template('validation_email_text.txt', fullname=name, url=url)
+    html = render_template('validation_email.html', fullname=name, url=url)
+    msg.attach(MIMEText(text, 'plain'))
+    msg.attach(MIMEText(html, 'html'))
+
+    message = msg.as_string()
+
+    server.sendmail(SMTP_ACCOUNT, email, message)
     server.quit()
 
 
 def get_user_db_data(email):
+
+    app.logger.debug('In get_user_db_data')
 
     encoded_email = email.encode('utf-8')
     db = get_db()
