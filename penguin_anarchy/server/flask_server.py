@@ -65,21 +65,40 @@ def login():
 
 
 @app.route('/validate/<email>/<token>', methods=['GET'])
-def validate():
-
-    email = request.values.get('email')
-    token = request.values.get('token')
+def validate(email, token):
 
     user = get_user_db_data(email)
 
-    # handle no user account
+    if user is None:
+        return redirect(url_for('create_user'))
 
-    # check already validated
+    if user['validated']:
+        return redirect(url_for('login'))
 
-    # check token expired
+    #  check token expired
+    
+    if not user.get('validation_token'):
+        gen_token_and_send_email(user)
+        return render_template('expired_validation.html')
 
-    # check token matches
+    if user['validation_token_expires']:
+        now = datetime.utcnow() 
+        now = now.isoformat().split('.')[0]
 
+        if now > user['validation_token_expires']:
+            gen_token_and_send_email(user)
+            return render_template('expired_validation.html')
+
+    else:
+        gen_token_and_send_email(user)
+        return render_template('expired_validation.html')
+
+    if token != user['validation_token']:
+        gen_token_and_send_email(user)
+        return render_template('expired_validation.html')
+
+    set_user_validated(user)
+    return render_template('login.html')
 
 @app.route('/create_user', methods=['GET'])
 def create_user():
@@ -224,6 +243,9 @@ def get_user_db_data(email):
     cur.execute(sql_get.format(encoded_email))
     row = cur.fetchone()
 
+    if row is None:
+        return None 
+  
     user = {
         'email': row[0].decode('utf-8'),
         'name': row[1].decode('utf-8'),
@@ -233,3 +255,41 @@ def get_user_db_data(email):
     }
 
     return user
+
+def gen_token_and_send_email(user):
+    token = str(uuid.uuid4())
+    tomorrow = datetime.utcnow() + timedelta(days=1)
+    tomorrow = tomorrow.isoformat().split('.')[0]
+
+    sql = '''INSERT INTO users(validation_token, validation_token_expires)
+                    VALUES(?,?)'''
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+    except Exception, ex:
+        logging.exception(ex)
+    try:
+        cur.execute(sql, (token, tomorrow))
+        db.commit()
+    except Exception, ex:
+        logging.exception(ex)
+            
+    user['validation_token'] = token
+    user['validation_token_expires'] = tomorrow
+
+    send_validation_email(user)
+
+def set_user_validated(user):
+    sql = '''INSERT INTO users(validated)
+                    VALUES(?)'''
+    try:
+        db = get_db()
+        cur = db.cursor()
+    except Exception, ex:
+        logging.exception(ex)
+    try:
+        cur.execute(sql, (True))
+        db.commit()
+    except Exception, ex:
+        logging.exception(ex)
