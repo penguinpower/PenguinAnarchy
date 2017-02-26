@@ -78,10 +78,12 @@ def validate(email, token):
     #  check token expired
     
     if not user.get('validation_token'):
+        app.logger.debug('Token exists?')
         gen_token_and_send_email(user)
         return render_template('expired_validation.html')
 
     if user['validation_token_expires']:
+        app.logger.debug('Is the token expired?')
         now = datetime.utcnow() 
         now = now.isoformat().split('.')[0]
 
@@ -90,10 +92,12 @@ def validate(email, token):
             return render_template('expired_validation.html')
 
     else:
+        app.logger.debug('No token expiration date.')
         gen_token_and_send_email(user)
         return render_template('expired_validation.html')
 
     if token != user['validation_token']:
+        app.logger.debug('Token does not match.')
         gen_token_and_send_email(user)
         return render_template('expired_validation.html')
 
@@ -171,8 +175,8 @@ def create_new_user(user_data):
     encoded_password = user_data['password'].encode('utf-8')
     hashed_password = bcrypt.hashpw(encoded_password, bcrypt.gensalt())
 
-    sql = '''INSERT INTO users(email, name, password, validation_token, validation_token_expires)
-             VALUES(?,?,?,?,?)'''
+    sql = '''INSERT INTO users(email, name, password, validation_token,
+             validation_token_expires) VALUES(?,?,?,?,?)'''
 
     try:
         db = get_db()
@@ -210,7 +214,7 @@ def send_validation_email(new_user):
     name = new_user['name']
     token = new_user['validation_token']
     url = 'https://penguin-anarchy.org/validate/%s/%s' %(email, token)
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
  
     msg['From'] = SMTP_ACCOUNT
     msg['To'] = email
@@ -260,9 +264,11 @@ def gen_token_and_send_email(user):
     token = str(uuid.uuid4())
     tomorrow = datetime.utcnow() + timedelta(days=1)
     tomorrow = tomorrow.isoformat().split('.')[0]
+    encoded_email = user['email'].encode('utf-8')
 
-    sql = '''INSERT INTO users(validation_token, validation_token_expires)
-                    VALUES(?,?)'''
+    sql = """UPDATE users
+             SET validation_token=?, validation_token_expires=?
+             WHERE email=?""" 
 
     try:
         db = get_db()
@@ -270,7 +276,7 @@ def gen_token_and_send_email(user):
     except Exception, ex:
         logging.exception(ex)
     try:
-        cur.execute(sql, (token, tomorrow))
+        cur.execute(sql, (token, tomorrow, encoded_email))
         db.commit()
     except Exception, ex:
         logging.exception(ex)
@@ -281,15 +287,17 @@ def gen_token_and_send_email(user):
     send_validation_email(user)
 
 def set_user_validated(user):
-    sql = '''INSERT INTO users(validated)
-                    VALUES(?)'''
+    encoded_email = user['email'].encode('utf-8')
+
+    sql = """UPDATE users
+             SET validated=? WHERE email=?""" 
     try:
         db = get_db()
         cur = db.cursor()
     except Exception, ex:
         logging.exception(ex)
     try:
-        cur.execute(sql, (True))
+        cur.execute(sql, (1, encoded_email))
         db.commit()
     except Exception, ex:
         logging.exception(ex)
