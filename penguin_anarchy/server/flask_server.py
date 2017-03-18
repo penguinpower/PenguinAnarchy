@@ -18,7 +18,7 @@ SMTP_ACCOUNT = 'penguin@collison.net'
 SMTP_ACCOUNT_PASSWORD = os.environ['PENGUIN_PASSWORD']
 SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 465
-
+COOKIE_SESSION = 'penguin_session'
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../templates')
 
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
@@ -39,7 +39,7 @@ def close_connection(exception):
 
 
 @app.route('/')
-def hello_world():
+def home_page():
     return 'Hello, World!'
 
 
@@ -57,7 +57,10 @@ def login():
         login_data = request.form.to_dict()
         was_logged_in = log_in_user(login_data)
         if was_logged_in:
-            return redirect(url_for(''))  # XXX
+            redirect_to_index = redirect('/')
+            response = app.make_response(redirect_to_index)
+            response.set_cookie(COOKIE_SESSION)
+            return response
         else:
             abort()
     else:
@@ -213,7 +216,10 @@ def send_validation_email(new_user):
     email = new_user['email']
     name = new_user['name']
     token = new_user['validation_token']
-    url = 'https://penguin-anarchy.org/validate/%s/%s' %(email, token)
+    if app.debug:
+        url = 'http://%s/validate/%s/%s' %(app.config['SERVER_NAME'], email, token)
+    else:
+        url = 'https://penguin-anarchy.org/validate/%s/%s' %(email, token)
     msg = MIMEMultipart('alternative')
  
     msg['From'] = SMTP_ACCOUNT
