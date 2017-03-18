@@ -9,10 +9,14 @@ parser.add_argument('-d', '--dev', dest='dev', action='store_true',
 args = parser.parse_args()
 
 if args.dev is True:
+    host='127.0.0.1'
     port=8080
     debug=True
 else:
+    host='penguin_anarchy'
     port=80
     debug=False
 
-app.run(port=port, debug=debug)
+app.config['DEBUG'] = True
+app.config['SERVER_NAME'] = '%s:%s'  %(host, port)
+app.run(debug=debug)
