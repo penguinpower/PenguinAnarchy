@@ -40,7 +40,7 @@ def close_connection(exception):
 
 @app.route('/')
 def home_page():
-    return 'Hello, World!'
+    return render_template('home_page.html')
 
 
 @app.route('/cow/<name>', methods=['GET', 'POST'])
